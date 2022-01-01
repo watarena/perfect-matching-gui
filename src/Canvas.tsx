@@ -1,6 +1,6 @@
 import React from 'react'
 
-const radius = 50
+const radius = 10
 const lineWidth = 1
 
 let nextVertexID = 0;
@@ -10,6 +10,7 @@ class Vertex {
     y: number;
     r: number = radius;
     id: number;
+    selected: boolean = false;
 
     constructor(x: number, y: number) {
         this.x = x;
@@ -18,8 +19,8 @@ class Vertex {
         nextVertexID++;
     }
 
-    draw(context: CanvasRenderingContext2D, color = 'black') {
-        context.fillStyle = color
+    draw(context: CanvasRenderingContext2D) {
+        context.fillStyle = this.selected? 'red' : 'black'
         context.beginPath();
         context.arc(this.x, this.y, this.r, 0, 2 * Math.PI);
         context.fill();
@@ -28,6 +29,25 @@ class Vertex {
 
     clicked(x: number, y: number): boolean {
         return (this.x - x) ** 2 + (this.y - y) ** 2 <= this.r ** 2
+    }
+}
+
+class Edge {
+    v1: Vertex
+    v2: Vertex
+
+    constructor(v1: Vertex, v2: Vertex) {
+        this.v1 = v1;
+        this.v2 = v2;
+    }
+
+    draw(context: CanvasRenderingContext2D) {
+        context.fillStyle = 'black'
+        context.beginPath();
+        context.moveTo(this.v1.x, this.v1.y);
+        context.lineTo(this.v2.x, this.v2.y);
+        context.stroke();
+        context.closePath();
     }
 }
 
@@ -46,6 +66,8 @@ function Button({text, onClick}: ButtonProp): JSX.Element {
 
 type CanvasState = {
     vertices: Array<Vertex>;
+    edges: Array<Edge>;
+    selectedVertex?: Vertex;
 }
 
 class Canvas extends React.Component<{}, CanvasState, any> {
@@ -56,6 +78,7 @@ class Canvas extends React.Component<{}, CanvasState, any> {
         super(props);
         this.state = {
             vertices: [],
+            edges: [],
         }
     }
 
@@ -92,6 +115,40 @@ class Canvas extends React.Component<{}, CanvasState, any> {
         })
     }
 
+    addEdge = (e: React.MouseEvent<HTMLCanvasElement, MouseEvent>) => {
+        const {x, y} = this.getCoordinate(e);
+        const selectedVertex = this.state.vertices.find((v) => v.clicked(x, y));
+        if (!selectedVertex) {
+            return
+        }
+
+        if (!this.state.selectedVertex) {
+            selectedVertex.selected = true;
+            this.setState({
+                ...this.state,
+                selectedVertex: selectedVertex,
+            });
+            return;
+        }
+
+        if (selectedVertex.selected) {
+            selectedVertex.selected = false;
+            this.setState({
+                ...this.state,
+                selectedVertex: undefined,
+            });
+            return;
+        }
+
+        this.state.selectedVertex.selected = false;
+
+        this.setState({
+            ...this.state,
+            edges: this.state.edges.concat(new Edge(this.state.selectedVertex, selectedVertex)),
+            selectedVertex: undefined,
+        })
+    }
+
     componentDidUpdate() {
         this.draw();
     }
@@ -112,12 +169,8 @@ class Canvas extends React.Component<{}, CanvasState, any> {
         context.clearRect(0, 0, this.canvas.width, this.canvas.height)
         context.lineWidth = lineWidth;
 
-        this.state.vertices.forEach((v) => {
-            context.beginPath();
-            context.arc(v.x, v.y, radius, 0, 2 * Math.PI);
-            context.fill();
-            context.closePath();
-        })
+        this.state.edges.forEach((e) => {e.draw(context)})
+        this.state.vertices.forEach((v) => {v.draw(context)})
     }
 
     render(): React.ReactNode {
@@ -126,6 +179,7 @@ class Canvas extends React.Component<{}, CanvasState, any> {
                 <div>
                     <Button text="add vertex" onClick={() => this.onClick = (e) => this.addVertex(e)} />
                     <Button text="delete vertex" onClick={() => this.onClick = (e) => this.deleteVertex(e)} />
+                    <Button text="add edge" onClick={() => this.onClick = (e) => this.addEdge(e)} />
                 </div>
                 <div>
                     <canvas
