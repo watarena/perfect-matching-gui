@@ -1,0 +1,15 @@
+.button {
+    appearance: none;
+    background: #dddddd;
+    color: #000000;
+    padding: 8px 12px;
+    font-size: 12px;
+}
+
+.button:hover {
+     background: #aaaaaa;
+}
+
+.button:disabled {
+    background: #aaaaaa;
+}

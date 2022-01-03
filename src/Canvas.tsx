@@ -1,4 +1,5 @@
 import React from 'react'
+import './Canvas.css';
 
 const radius = 10
 const lineWidth = 1
@@ -54,31 +55,63 @@ class Edge {
 type ButtonProp = {
     onClick: React.MouseEventHandler<HTMLButtonElement>;
     text: string;
+    selected: boolean;
 };
 
-function Button({text, onClick}: ButtonProp): JSX.Element {
+function Button({text, onClick, selected}: ButtonProp): JSX.Element {
     return (
-        <button type="button" onClick={onClick}>
+        <button type="button" className="button" onClick={onClick} disabled={selected}>
             {text}
         </button>
     )
+}
+
+type Button = {
+    text: string,
+    buttonOnClick: React.MouseEventHandler<HTMLButtonElement>,
+    canvasOnClick: React.MouseEventHandler<HTMLCanvasElement>,
 }
 
 type CanvasState = {
     vertices: Array<Vertex>;
     edges: Array<Edge>;
     selectedVertex?: Vertex;
+    buttons: Array<Button>;
+    selectedButton: Button;
 }
 
 class Canvas extends React.Component<{}, CanvasState, any> {
     private canvas: HTMLCanvasElement | null = null
-    private onClick: React.MouseEventHandler<HTMLCanvasElement> = (e) => {this.addVertex(e)};
 
     constructor(props: React.ClassAttributes<{}>) {
         super(props);
+
+        const makeExclusiveButton = (text: string, onClick: (e: React.MouseEvent<HTMLCanvasElement, MouseEvent>) => void): Button => {
+            const b: Button = {
+                text,
+                buttonOnClick: () => {
+                    this.setState({
+                        ...this.state,
+                        selectedButton: b,
+                    })
+                },
+                canvasOnClick: (e) => onClick(e),
+            }
+
+            return b;
+        }
+
+        const buttons = [
+            makeExclusiveButton('add vertex', this.addVertex),
+            makeExclusiveButton('delete vertex', this.deleteVertex),
+            makeExclusiveButton('add edge', this.addEdge),
+        ]
+
         this.state = {
             vertices: [],
             edges: [],
+            buttons,
+            selectedButton: buttons[0],
         }
     }
 
@@ -177,16 +210,18 @@ class Canvas extends React.Component<{}, CanvasState, any> {
         return (
             <div>
                 <div>
-                    <Button text="add vertex" onClick={() => this.onClick = (e) => this.addVertex(e)} />
-                    <Button text="delete vertex" onClick={() => this.onClick = (e) => this.deleteVertex(e)} />
-                    <Button text="add edge" onClick={() => this.onClick = (e) => this.addEdge(e)} />
+                    {
+                        this.state.buttons.map((b) => {
+                            return (<Button text={b.text} onClick={b.buttonOnClick} selected={b.text === this.state.selectedButton.text} />)
+                        })
+                    }
                 </div>
                 <div>
                     <canvas
                         width={window.innerWidth}
                         height={window.innerHeight}
                         ref={(canvas) => {this.canvas = canvas}}
-                        onClick={(e) => {this.onClick(e)}}
+                        onClick={(e) => {this.state.selectedButton.canvasOnClick(e)}}
                     >
                         キャンバスの表示内容を説明する代替テキストです。
                     </canvas>
