@@ -1,5 +1,6 @@
 import React from 'react'
 import './Canvas.css';
+import { edge, calculatePerfectMatching } from './perfectMatchings'
 
 const radius = 10
 const vertexLineWidth = 1
@@ -43,8 +44,8 @@ class Edge {
         this.v2 = v2;
     }
 
-    draw(context: CanvasRenderingContext2D) {
-        context.fillStyle = 'black'
+    draw(context: CanvasRenderingContext2D, color: string) {
+        context.strokeStyle = color;
         context.lineWidth = edgeWidth;
         context.beginPath();
         context.moveTo(this.v1.x, this.v1.y);
@@ -78,12 +79,33 @@ type Button = {
     canvasOnClick: React.MouseEventHandler<HTMLCanvasElement>,
 }
 
+class PerfectMatching {
+    private edges: Set<string> = new Set()
+
+    static edge2string(e: edge) {
+        if (e.v1 < e.v2) {
+            return `${e.v1},${e.v2}`
+        }
+        return `${e.v2},${e.v1}`
+    }
+
+    constructor(edges: Array<edge>) {
+        edges.forEach((e) => this.edges.add(PerfectMatching.edge2string(e)))
+    }
+
+    has(e: Edge): boolean {
+        return this.edges.has(PerfectMatching.edge2string({v1: e.v1.id, v2: e.v2.id}))
+    }
+}
+
 type CanvasState = {
     vertices: Array<Vertex>;
     edges: Array<Edge>;
     selectedVertex?: Vertex;
     buttons: Array<Button>;
     selectedButton: Button;
+    perfectMatchings?: Array<PerfectMatching>
+    perfectMatchingsIndex: number
 }
 
 class Canvas extends React.Component<{}, CanvasState, any> {
@@ -92,17 +114,23 @@ class Canvas extends React.Component<{}, CanvasState, any> {
     constructor(props: React.ClassAttributes<{}>) {
         super(props);
 
-        const makeExclusiveButton = (text: string, onClick: (e: React.MouseEvent<HTMLCanvasElement, MouseEvent>) => void): Button => {
+        const makeExclusiveButton = (
+            text: string,
+            canvasOnClick: (e: React.MouseEvent<HTMLCanvasElement, MouseEvent>) => void,
+            changeState?: () => object,
+        ): Button => {
             const b: Button = {
                 text,
                 buttonOnClick: () => {
+                    const state = changeState? changeState() : {};
                     this.setState({
-                        ...this.state,
                         selectedVertex: undefined,
                         selectedButton: b,
+                        perfectMatchings: undefined,
+                        ...state,
                     })
                 },
-                canvasOnClick: (e) => onClick(e),
+                canvasOnClick,
             }
 
             return b;
@@ -112,6 +140,7 @@ class Canvas extends React.Component<{}, CanvasState, any> {
             makeExclusiveButton('add vertex', this.addVertex),
             makeExclusiveButton('delete vertex', this.deleteVertex),
             makeExclusiveButton('add edge', this.addEdge),
+            makeExclusiveButton('calculate perfect matching', () => {}, this.calculatePerfectMatching),
         ]
 
         this.state = {
@@ -119,6 +148,7 @@ class Canvas extends React.Component<{}, CanvasState, any> {
             edges: [],
             buttons,
             selectedButton: buttons[0],
+            perfectMatchingsIndex: -1,
         }
     }
 
@@ -140,7 +170,6 @@ class Canvas extends React.Component<{}, CanvasState, any> {
             return
         }
         this.setState({
-            ...this.state,
             vertices: this.state.vertices.concat(new Vertex(x, y))
         })
     }
@@ -155,7 +184,6 @@ class Canvas extends React.Component<{}, CanvasState, any> {
         const vertices = Array.from(this.state.vertices)
         vertices.splice(clickedVertexIndex, 1)
         this.setState({
-            ...this.state,
             vertices,
             edges: this.state.edges.filter((e) => e.v1.id !== clickedVertexID && e.v2.id !== clickedVertexID),
         })
@@ -170,7 +198,6 @@ class Canvas extends React.Component<{}, CanvasState, any> {
 
         if (!this.state.selectedVertex) {
             this.setState({
-                ...this.state,
                 selectedVertex: selectedVertex,
             });
             return;
@@ -178,7 +205,6 @@ class Canvas extends React.Component<{}, CanvasState, any> {
 
         if (selectedVertex.id === this.state.selectedVertex.id) {
             this.setState({
-                ...this.state,
                 selectedVertex: undefined,
             });
             return;
@@ -190,10 +216,20 @@ class Canvas extends React.Component<{}, CanvasState, any> {
         }
 
         this.setState({
-            ...this.state,
             edges: this.state.edges.concat(edge),
             selectedVertex: undefined,
         })
+    }
+
+    calculatePerfectMatching = () => {
+        const vertices = this.state.vertices.map((v) => v.id);
+        const edges = this.state.edges.map((e) => ({v1: e.v1.id, v2: e.v2.id}));
+        const pms = calculatePerfectMatching(vertices, edges);
+
+        return {
+            perfectMatchings: pms.map((pm) => new PerfectMatching(pm)),
+            perfectMatchingsIndex: 0,
+        }
     }
 
     componentDidUpdate() {
@@ -215,7 +251,13 @@ class Canvas extends React.Component<{}, CanvasState, any> {
         }
         context.clearRect(0, 0, this.canvas.width, this.canvas.height)
 
-        this.state.edges.forEach((e) => {e.draw(context)})
+        this.state.edges.forEach((e) => {
+            if (this.state.perfectMatchings && this.state.perfectMatchings[this.state.perfectMatchingsIndex].has(e)) {
+                e.draw(context, 'red');
+            } else {
+                e.draw(context, 'black');
+            }
+        })
         this.state.vertices.forEach((v) => {
             v.draw(context, this.state.selectedVertex && v.id === this.state.selectedVertex.id? 'red' : 'black')
         })
@@ -226,8 +268,8 @@ class Canvas extends React.Component<{}, CanvasState, any> {
             <div>
                 <div>
                     {
-                        this.state.buttons.map((b) => {
-                            return (<Button text={b.text} onClick={b.buttonOnClick} selected={b.text === this.state.selectedButton.text} />)
+                        this.state.buttons.map((b, i) => {
+                            return (<Button key={`button${i}`} text={b.text} onClick={b.buttonOnClick} selected={b.text === this.state.selectedButton.text} />)
                         })
                     }
                 </div>
