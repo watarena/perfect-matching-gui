@@ -13,3 +13,19 @@
 .button:disabled {
     background: #aaaaaa;
 }
+
+.select-button {
+    appearance: none;
+    background: #dddddd;
+    color: #000000;
+    padding: 5px 9px;
+    font-size: 12px;
+}
+
+.select-button:hover {
+     background: #aaaaaa;
+}
+
+.select-button:disabled {
+    background: #aaaaaa;
+}

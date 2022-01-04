@@ -30,7 +30,7 @@ export function calculatePerfectMatching(vertices: Array<vertex>, edges: Array<e
         return []
     }
     if (vertices.length === 2) {
-        const e = edges.find((e) => e.v1 === vertices[0] && e.v2 === vertices[1] || e.v1 === vertices[1] && e.v2 === vertices[0])
+        const e = edges.find((e) => (e.v1 === vertices[0] && e.v2 === vertices[1]) || (e.v1 === vertices[1] && e.v2 === vertices[0]))
         if (e) {
             return [[e]]
         } else {

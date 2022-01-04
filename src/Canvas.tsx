@@ -5,9 +5,8 @@ import { edge, calculatePerfectMatching } from './perfectMatchings'
 const radius = 10
 const vertexLineWidth = 1
 
-let nextVertexID = 0;
-
 class Vertex {
+    static #nextVertexID = 0
     x: number;
     y: number;
     r: number = radius;
@@ -16,8 +15,8 @@ class Vertex {
     constructor(x: number, y: number) {
         this.x = x;
         this.y = y;
-        this.id = nextVertexID;
-        nextVertexID++;
+        this.id = Vertex.#nextVertexID;
+        Vertex.#nextVertexID++;
     }
 
     draw(context: CanvasRenderingContext2D, color: string) {
@@ -73,7 +72,7 @@ function Button({text, onClick, selected}: ButtonProp): JSX.Element {
     )
 }
 
-type Button = {
+type ButtonConfig = {
     text: string,
     buttonOnClick: React.MouseEventHandler<HTMLButtonElement>,
     canvasOnClick: React.MouseEventHandler<HTMLCanvasElement>,
@@ -102,8 +101,8 @@ type CanvasState = {
     vertices: Array<Vertex>;
     edges: Array<Edge>;
     selectedVertex?: Vertex;
-    buttons: Array<Button>;
-    selectedButton: Button;
+    buttons: Array<ButtonConfig>;
+    selectedButton: ButtonConfig;
     perfectMatchings?: Array<PerfectMatching>
     perfectMatchingsIndex: number
 }
@@ -118,8 +117,8 @@ class Canvas extends React.Component<{}, CanvasState, any> {
             text: string,
             canvasOnClick: (e: React.MouseEvent<HTMLCanvasElement, MouseEvent>) => void,
             changeState?: () => object,
-        ): Button => {
-            const b: Button = {
+        ): ButtonConfig => {
+            const b: ButtonConfig = {
                 text,
                 buttonOnClick: () => {
                     const state = changeState? changeState() : {};
@@ -252,7 +251,11 @@ class Canvas extends React.Component<{}, CanvasState, any> {
         context.clearRect(0, 0, this.canvas.width, this.canvas.height)
 
         this.state.edges.forEach((e) => {
-            if (this.state.perfectMatchings && this.state.perfectMatchings[this.state.perfectMatchingsIndex].has(e)) {
+            if (
+                this.state.perfectMatchings &&
+                this.state.perfectMatchings[this.state.perfectMatchingsIndex] && 
+                this.state.perfectMatchings[this.state.perfectMatchingsIndex].has(e)
+            ) {
                 e.draw(context, 'red');
             } else {
                 e.draw(context, 'black');
@@ -271,6 +274,35 @@ class Canvas extends React.Component<{}, CanvasState, any> {
                         this.state.buttons.map((b, i) => {
                             return (<Button key={`button${i}`} text={b.text} onClick={b.buttonOnClick} selected={b.text === this.state.selectedButton.text} />)
                         })
+                    }
+                    {
+                        this.state.perfectMatchings?
+                        [
+                            (
+                                <button
+                                    type="button"
+                                    className="select-button"
+                                    disabled={this.state.perfectMatchingsIndex === 0}
+                                    onClick={() => this.setState({perfectMatchingsIndex:this.state.perfectMatchingsIndex - 1})}
+                                >
+                                    &lt;
+                                </button>
+                            ),
+                            (
+                                ` ${this.state.perfectMatchingsIndex + 1}/${this.state.perfectMatchings.length} `
+                            ),
+                            (
+                                <button 
+                                    type="button"
+                                    className="select-button"
+                                    disabled={!this.state.perfectMatchings || this.state.perfectMatchingsIndex >= this.state.perfectMatchings.length - 1}
+                                    onClick={() => this.setState({perfectMatchingsIndex:this.state.perfectMatchingsIndex + 1})}
+                                >
+                                    &gt;
+                                </button>
+                            ),
+                        ]
+                        : []
                     }
                 </div>
                 <div>
