@@ -1,0 +1,13 @@
+{
+  "files": {
+    "main.css": "/perfect-matching-ui/static/css/main.ed582d96.css",
+    "main.js": "/perfect-matching-ui/static/js/main.114b753a.js",
+    "index.html": "/perfect-matching-ui/index.html",
+    "main.ed582d96.css.map": "/perfect-matching-ui/static/css/main.ed582d96.css.map",
+    "main.114b753a.js.map": "/perfect-matching-ui/static/js/main.114b753a.js.map"
+  },
+  "entrypoints": [
+    "static/css/main.ed582d96.css",
+    "static/js/main.114b753a.js"
+  ]
+}
