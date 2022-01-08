@@ -1,4 +1,4 @@
-# perfect-matching-ui
+# perfect-matching-gui
 
 <https://watarena.github.io/perfect-matching-ui>
 
