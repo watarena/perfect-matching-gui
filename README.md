@@ -1,6 +1,6 @@
 # perfect-matching-gui
 
-<https://watarena.github.io/perfect-matching-ui>
+<https://watarena.github.io/perfect-matching-gui>
 
 ---
 
