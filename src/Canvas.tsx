@@ -116,8 +116,19 @@ type CanvasData = {
     edges: Array<{v1: number, v2: number}>;
 }
 
+function isCanvasData(arg: any): arg is CanvasData {
+    const isNumber = (arg: any) => typeof arg === 'number'
+    return arg &&
+      typeof arg === 'object' &&
+      'width' in arg && isNumber(arg.width) &&
+      'height' in arg && isNumber(arg.height) &&
+      'vertices' in arg && Array.isArray(arg.vertices) && arg.vertices.every((e:any) => typeof e === 'object' && 'x' in e && isNumber(e.x) && 'y' in e && isNumber(e.y)) &&
+      'edges' in arg && Array.isArray(arg.edges) && arg.edges.every((e:any) => typeof e === 'object' && 'v1' in e && isNumber(e.v1) && 'v2' in e && isNumber(e.v2))
+}
+
 class Canvas extends React.Component<{}, CanvasState, any> {
     private canvas: HTMLCanvasElement | null = null
+    private fileInput: HTMLInputElement | null = null;
 
     constructor(props: React.ClassAttributes<{}>) {
         super(props);
@@ -151,6 +162,10 @@ class Canvas extends React.Component<{}, CanvasState, any> {
             {
                 text: 'save file',
                 buttonOnClick: () => {this.saveFile()},
+            },
+            {
+                text: 'load file',
+                buttonOnClick: () => {if (this.fileInput) this.fileInput.click()},
             },
             makeExclusiveButton('calculate perfect matching', () => {}, this.calculatePerfectMatching),
         ]
@@ -281,6 +296,40 @@ class Canvas extends React.Component<{}, CanvasState, any> {
         })
     }
 
+    async loadFile(e: React.ChangeEvent<HTMLInputElement>) {
+        if (!e.target.files) {
+            return
+        }
+        const file = e.target.files.item(0)
+        if (!file) {
+            return
+        }
+        const fileContent = await file.text()
+        const canvasData: any = JSON.parse(fileContent)
+        if (!isCanvasData(canvasData)) {
+            throw new Error('invalid canvas data')
+        }
+        let height = canvasData.height;
+        let width = canvasData.width;
+        const vertices = canvasData.vertices.map(({x, y}) => {
+            if (width < x) {
+                width = x + radius
+            }
+            if (height < y) {
+                height = y + radius
+            }
+            return new Vertex(x, y)
+        })
+        const edges = canvasData.edges.map(({v1, v2}) => new Edge(vertices[v1], vertices[v2]))
+
+        this.setState({
+            width,
+            height,
+            vertices,
+            edges,
+        })
+    }
+
     saveFile() {
         const verticesIndex = new Map<number, number>()
         const vertices = this.state.vertices.map((v, i) => {
@@ -321,6 +370,7 @@ class Canvas extends React.Component<{}, CanvasState, any> {
     render(): React.ReactNode {
         return (
             <div>
+                <input type="file" name="file" id="file" ref={(file) => {this.fileInput = file}} style={{display: 'none'}} onChange={(e) => {this.loadFile(e)}}/>
                 <div>
                     {
                         this.state.buttons.map((b, i) => {
