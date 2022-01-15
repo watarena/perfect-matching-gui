@@ -75,7 +75,7 @@ function Button({text, onClick, selected}: ButtonProp): JSX.Element {
 type ButtonConfig = {
     text: string,
     buttonOnClick: React.MouseEventHandler<HTMLButtonElement>,
-    canvasOnClick: React.MouseEventHandler<HTMLCanvasElement>,
+    canvasOnClick?: React.MouseEventHandler<HTMLCanvasElement>,
 }
 
 class PerfectMatching {
@@ -103,8 +103,17 @@ type CanvasState = {
     selectedVertex?: Vertex;
     buttons: Array<ButtonConfig>;
     selectedButton: ButtonConfig;
-    perfectMatchings?: Array<PerfectMatching>
-    perfectMatchingsIndex: number
+    perfectMatchings?: Array<PerfectMatching>;
+    perfectMatchingsIndex: number;
+    width: number;
+    height: number;
+}
+
+type CanvasData = {
+    width: number;
+    height: number;
+    vertices: Array<{x:number, y:number}>;
+    edges: Array<{v1: number, v2: number}>;
 }
 
 class Canvas extends React.Component<{}, CanvasState, any> {
@@ -135,10 +144,14 @@ class Canvas extends React.Component<{}, CanvasState, any> {
             return b;
         }
 
-        const buttons = [
+        const buttons: Array<ButtonConfig> = [
             makeExclusiveButton('add vertex', this.addVertex),
             makeExclusiveButton('delete vertex', this.deleteVertex),
             makeExclusiveButton('add edge', this.addEdge),
+            {
+                text: 'save file',
+                buttonOnClick: () => {this.saveFile()},
+            },
             makeExclusiveButton('calculate perfect matching', () => {}, this.calculatePerfectMatching),
         ]
 
@@ -148,6 +161,8 @@ class Canvas extends React.Component<{}, CanvasState, any> {
             buttons,
             selectedButton: buttons[0],
             perfectMatchingsIndex: -1,
+            width: window.innerWidth,
+            height: window.innerHeight,
         }
     }
 
@@ -266,6 +281,43 @@ class Canvas extends React.Component<{}, CanvasState, any> {
         })
     }
 
+    saveFile() {
+        const verticesIndex = new Map<number, number>()
+        const vertices = this.state.vertices.map((v, i) => {
+            verticesIndex.set(v.id, i)
+            return {x: v.x, y: v.y}
+        })
+        const edges = this.state.edges.reduce<Array<{v1: number, v2: number}>>((acc, e) => {
+            const v1 = verticesIndex.get(e.v1.id)
+            const v2 = verticesIndex.get(e.v2.id)
+            if (v1 != null && v2 != null) {
+                acc.push({v1, v2})
+            }
+            return acc
+        }, [])
+        const canvasData: CanvasData = {
+            width: this.state.width,
+            height: this.state.height,
+            vertices,
+            edges,
+        }
+        const fileContent = JSON.stringify(canvasData, undefined, 2)
+        const downloadURL = URL.createObjectURL(new Blob([fileContent]))
+        const pad0To2 = (n: number) => n.toString().padStart(2, '0')
+        const now = new Date()
+        const [M, d, h, m, s] = [
+            now.getMonth() + 1,
+            now.getDate(),
+            now.getHours(),
+            now.getMinutes(),
+            now.getSeconds(),
+        ].map(pad0To2)
+        const a = document.createElement('a')
+        a.href = downloadURL
+        a.download = `perfect-matching-gui-${now.getFullYear()}${M}${d}-${h}${m}${s}.json`
+        a.click()
+    }
+
     render(): React.ReactNode {
         return (
             <div>
@@ -281,6 +333,7 @@ class Canvas extends React.Component<{}, CanvasState, any> {
                             (
                                 <button
                                     type="button"
+                                    key="<"
                                     className="select-button"
                                     disabled={this.state.perfectMatchingsIndex === 0}
                                     onClick={() => this.setState({perfectMatchingsIndex:this.state.perfectMatchingsIndex - 1})}
@@ -294,6 +347,7 @@ class Canvas extends React.Component<{}, CanvasState, any> {
                             (
                                 <button 
                                     type="button"
+                                    key=">"
                                     className="select-button"
                                     disabled={!this.state.perfectMatchings || this.state.perfectMatchingsIndex >= this.state.perfectMatchings.length - 1}
                                     onClick={() => this.setState({perfectMatchingsIndex:this.state.perfectMatchingsIndex + 1})}
@@ -307,10 +361,12 @@ class Canvas extends React.Component<{}, CanvasState, any> {
                 </div>
                 <div>
                     <canvas
-                        width={window.innerWidth}
-                        height={window.innerHeight}
+                        width={this.state.width}
+                        height={this.state.height}
                         ref={(canvas) => {this.canvas = canvas}}
-                        onClick={(e) => {this.state.selectedButton.canvasOnClick(e)}}
+                        onClick={(e) => {
+                            if (this.state.selectedButton.canvasOnClick) this.state.selectedButton.canvasOnClick(e)
+                        }}
                     >
                         キャンバスの表示内容を説明する代替テキストです。
                     </canvas>
