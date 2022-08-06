@@ -18,6 +18,9 @@
   "devDependencies": {
     "react-scripts": "^5.0.1"
   },
+  "overrides": {
+    "nth-check": "^2.1.1"
+  },
   "scripts": {
     "start": "react-scripts start",
     "build": "rm -rf docs && react-scripts build && mv build docs",
