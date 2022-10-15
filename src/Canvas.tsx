@@ -411,6 +411,7 @@ class Canvas extends React.Component<{}, CanvasState, any> {
                 </div>
                 <div>
                     <canvas
+                        className='canvas'
                         width={this.state.width}
                         height={this.state.height}
                         ref={(canvas) => {this.canvas = canvas}}

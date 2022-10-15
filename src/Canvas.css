@@ -29,3 +29,7 @@
 .select-button:disabled {
     background: #aaaaaa;
 }
+
+.canvas {
+    border: solid 3px #000000;
+}
