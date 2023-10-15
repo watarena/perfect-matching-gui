@@ -1,13 +1,13 @@
 {
   "files": {
     "main.css": "/perfect-matching-gui/static/css/main.1af61aaa.css",
-    "main.js": "/perfect-matching-gui/static/js/main.89c7587f.js",
+    "main.js": "/perfect-matching-gui/static/js/main.8a534278.js",
     "index.html": "/perfect-matching-gui/index.html",
     "main.1af61aaa.css.map": "/perfect-matching-gui/static/css/main.1af61aaa.css.map",
-    "main.89c7587f.js.map": "/perfect-matching-gui/static/js/main.89c7587f.js.map"
+    "main.8a534278.js.map": "/perfect-matching-gui/static/js/main.8a534278.js.map"
   },
   "entrypoints": [
     "static/css/main.1af61aaa.css",
-    "static/js/main.89c7587f.js"
+    "static/js/main.8a534278.js"
   ]
 }
