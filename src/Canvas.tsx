@@ -97,14 +97,47 @@ class PerfectMatching {
     }
 }
 
+class PerfectMatchings {
+    private pms: Array<PerfectMatching>
+    private currentIndex: number
+
+    constructor(pms: Array<PerfectMatching>, currentIndex: number) {
+        this.pms = pms
+        if (currentIndex < 0 || pms.length <= currentIndex) {
+            throw new Error(`currentIndex ${currentIndex} is out of bound`)
+        }
+        this.currentIndex = currentIndex
+    }
+
+    hasNext(): boolean {
+        return this.currentIndex < this.pms.length - 1
+    }
+    next(): PerfectMatchings {
+        return new PerfectMatchings(this.pms, this.currentIndex + 1)
+    }
+    hasPrev(): boolean {
+        return this.currentIndex > 0
+    }
+    prev(): PerfectMatchings {
+        return new PerfectMatchings(this.pms, this.currentIndex - 1)
+    }
+
+    isIncludedInCurrent(e: Edge): boolean {
+        return this.pms[this.currentIndex].has(e)
+    }
+
+    currentPos(): string {
+        return `${this.currentIndex + 1}/${this.pms.length}`
+    }
+}
+
 type CanvasState = {
     vertices: Array<Vertex>;
     edges: Array<Edge>;
     selectedVertex?: Vertex;
     buttons: Array<ButtonConfig>;
     selectedButton: ButtonConfig;
-    perfectMatchings?: Array<PerfectMatching>;
-    perfectMatchingsIndex: number;
+    perfectMatchings?: PerfectMatchings;
     width: number;
     height: number;
 }
@@ -175,7 +208,6 @@ class Canvas extends React.Component<{}, CanvasState, any> {
             edges: [],
             buttons,
             selectedButton: buttons[0],
-            perfectMatchingsIndex: -1,
             width: window.innerWidth,
             height: window.innerHeight,
         }
@@ -250,14 +282,13 @@ class Canvas extends React.Component<{}, CanvasState, any> {
         })
     }
 
-    calculatePerfectMatching = () => {
+    calculatePerfectMatching: () => Partial<CanvasState> = () => {
         const vertices = this.state.vertices.map((v) => v.id);
         const edges = this.state.edges.map((e) => ({v1: e.v1.id, v2: e.v2.id}));
         const pms = calculatePerfectMatching(vertices, edges);
 
         return {
-            perfectMatchings: pms.map((pm) => new PerfectMatching(pm)),
-            perfectMatchingsIndex: 0,
+            perfectMatchings: new PerfectMatchings(pms.map((pm) => new PerfectMatching(pm)), 0)
         }
     }
 
@@ -282,9 +313,7 @@ class Canvas extends React.Component<{}, CanvasState, any> {
 
         this.state.edges.forEach((e) => {
             if (
-                this.state.perfectMatchings &&
-                this.state.perfectMatchings[this.state.perfectMatchingsIndex] && 
-                this.state.perfectMatchings[this.state.perfectMatchingsIndex].has(e)
+                this.state.perfectMatchings && this.state.perfectMatchings.isIncludedInCurrent(e)
             ) {
                 e.draw(context, 'red');
             } else {
@@ -385,22 +414,22 @@ class Canvas extends React.Component<{}, CanvasState, any> {
                                     type="button"
                                     key="<"
                                     className="select-button"
-                                    disabled={this.state.perfectMatchingsIndex === 0}
-                                    onClick={() => this.setState({perfectMatchingsIndex:this.state.perfectMatchingsIndex - 1})}
+                                    disabled={!this.state.perfectMatchings.hasPrev()}
+                                    onClick={() => this.setState({perfectMatchings: this.state.perfectMatchings?.prev()})}
                                 >
                                     &lt;
                                 </button>
                             ),
                             (
-                                ` ${this.state.perfectMatchingsIndex + 1}/${this.state.perfectMatchings.length} `
+                                ` ${this.state.perfectMatchings.currentPos()} `
                             ),
                             (
                                 <button 
                                     type="button"
                                     key=">"
                                     className="select-button"
-                                    disabled={!this.state.perfectMatchings || this.state.perfectMatchingsIndex >= this.state.perfectMatchings.length - 1}
-                                    onClick={() => this.setState({perfectMatchingsIndex:this.state.perfectMatchingsIndex + 1})}
+                                    disabled={!this.state.perfectMatchings.hasNext()}
+                                    onClick={() => this.setState({perfectMatchings:this.state.perfectMatchings?.next()})}
                                 >
                                     &gt;
                                 </button>
