@@ -100,26 +100,32 @@ class PerfectMatching {
 class PerfectMatchings {
     private pms: Array<PerfectMatching>
     private currentIndex: number
+    private fixedIndex: number | undefined
 
-    constructor(pms: Array<PerfectMatching>, currentIndex: number) {
+    constructor(
+        pms: Array<PerfectMatching>,
+        currentIndex: number,
+        fixedIndex: number | undefined
+    ) {
         this.pms = pms
         if (currentIndex < 0 || pms.length <= currentIndex) {
             throw new Error(`currentIndex ${currentIndex} is out of bound`)
         }
         this.currentIndex = currentIndex
+        this.fixedIndex = fixedIndex
     }
 
     hasNext(): boolean {
         return this.currentIndex < this.pms.length - 1
     }
     next(): PerfectMatchings {
-        return new PerfectMatchings(this.pms, this.currentIndex + 1)
+        return new PerfectMatchings(this.pms, this.currentIndex + 1, this.fixedIndex)
     }
     hasPrev(): boolean {
         return this.currentIndex > 0
     }
     prev(): PerfectMatchings {
-        return new PerfectMatchings(this.pms, this.currentIndex - 1)
+        return new PerfectMatchings(this.pms, this.currentIndex - 1, this.fixedIndex)
     }
 
     isIncludedInCurrent(e: Edge): boolean {
@@ -128,6 +134,25 @@ class PerfectMatchings {
 
     currentPos(): string {
         return `${this.currentIndex + 1}/${this.pms.length}`
+    }
+
+    fix(): PerfectMatchings {
+        return new PerfectMatchings(this.pms, this.currentIndex, this.currentIndex)
+    }
+
+    unFix(): PerfectMatchings {
+        return new PerfectMatchings(this.pms, this.currentIndex, undefined)
+    }
+
+    isIncludedInFixed(e: Edge): boolean {
+        if (this.fixedIndex === undefined) {
+            return false
+        }
+        return this.pms[this.fixedIndex].has(e)
+    }
+
+    isCurrentFixed(): boolean {
+        return this.currentIndex === this.fixedIndex
     }
 }
 
@@ -288,7 +313,7 @@ class Canvas extends React.Component<{}, CanvasState, any> {
         const pms = calculatePerfectMatching(vertices, edges);
 
         return {
-            perfectMatchings: new PerfectMatchings(pms.map((pm) => new PerfectMatching(pm)), 0)
+            perfectMatchings: new PerfectMatchings(pms.map((pm) => new PerfectMatching(pm)), 0, undefined)
         }
     }
 
@@ -312,13 +337,16 @@ class Canvas extends React.Component<{}, CanvasState, any> {
         context.clearRect(0, 0, this.canvas.width, this.canvas.height)
 
         this.state.edges.forEach((e) => {
-            if (
-                this.state.perfectMatchings && this.state.perfectMatchings.isIncludedInCurrent(e)
-            ) {
-                e.draw(context, 'red');
+            let color: string
+            const pms = this.state.perfectMatchings
+            if (pms && pms.isIncludedInCurrent(e)) {
+                color = 'red'
+            } else if (pms && pms.isIncludedInFixed(e)) {
+                color = 'green'
             } else {
-                e.draw(context, 'black');
+                color = 'black'
             }
+            e.draw(context, color);
         })
         this.state.vertices.forEach((v) => {
             v.draw(context, this.state.selectedVertex && v.id === this.state.selectedVertex.id? 'red' : 'black')
@@ -434,6 +462,23 @@ class Canvas extends React.Component<{}, CanvasState, any> {
                                     &gt;
                                 </button>
                             ),
+                            (
+                                <button 
+                                    type="button"
+                                    key="fix"
+                                    className="select-button"
+                                    // disabled={this.state.perfectMatchings.isCurrentFixed()}
+                                    onClick={() => {
+                                        const pms = this.state.perfectMatchings
+                                        if (!pms) { return }
+                                        this.setState({
+                                            perfectMatchings: pms.isCurrentFixed() ? pms.unFix() : pms.fix()
+                                        })
+                                    }}
+                                >
+                                    { this.state.perfectMatchings?.isCurrentFixed() ?  "Unfix" : "Fix" }
+                                </button> 
+                            )
                         ]
                         : []
                     }
